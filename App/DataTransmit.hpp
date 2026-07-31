@@ -55,6 +55,7 @@ private:
 	DataTransmit(DataTransmit&&) = delete;
 	DataTransmit& operator=(DataTransmit&&) = delete;
 
+	const static uint32_t MAX_TX_ATTEMPTS = 10; // Maximální počet pokusů o příjem dat, po kterém považujeme slave za nereagujícího
 	const uint32_t MaxPayloadSize = Packet::max_packet_size;
 	static const struct Radio_s *RadioDriver;
 	static const uint32_t CAD_sample = 200U; /* ms*/

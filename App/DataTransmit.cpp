@@ -46,21 +46,6 @@ void RadioCadTimeoutIrq( void *context ){
 	#endif
 }
 
-/*
-[[maybe_unused]] 
-void RxTimeoutTimerCallback(TimerHandle_t xTimer){
-	if( DataTransmit::MasterMode == true){
-		DataTransmit::RadioDriver->Standby( );
-		if(DataTransmit::RequestSent){
-			DataTransmit::RequestSent = false;
-			DataTransmit::SlaveNotResponding = true;
-			#if RADIO_DEBUG_PRINT 
-			printf("RX Timeout, slave not responding\n");
-			#endif
-		}
-	}	
-}
-*/
 
 extern "C" void OnCadDone( bool channelActivityDetected ){
 	if(channelActivityDetected){
@@ -82,9 +67,6 @@ extern "C" void OnCadDone( bool channelActivityDetected ){
 extern "C" void OnTxDone(void){
 	if( DataTransmit::MasterMode == true){
 		DataTransmit::RadioDriver->Rx(DataTransmit::ResponseTimeout); // Po odeslání požadavku přepneme rádio do přijímacího režimu
-		BaseType_t hpw = pdFALSE;
-		//auto Ok = xTimerStartFromISR(DataTransmit::RxTimeoutTimer,&hpw);
-		//configASSERT(Ok == pdPASS);
 		#if RADIO_DEBUG_PRINT 
 		printf("Transmission done, starting RX\n");
 		#endif
@@ -105,10 +87,7 @@ extern "C" void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t L
 	printf("Received packet: size=%u, rssi=%d, snr=%d time-out=%d\n", size, rssi, LoraSnr_FskCfo,DataTransmit::timeout);
 	#endif
 	DataTransmit::timeout = 0;
-	BaseType_t hpw = pdFALSE;
-	//auto Ok = xTimerStopFromISR(DataTransmit::RxTimeoutTimer ,&hpw);
-	//configASSERT(Ok == pdPASS);
-
+	
 	// kopírujeme payload do packetu pro další zpracování
 	std::array<uint8_t, Packet::max_packet_size> buffer{};
 	std::memcpy(buffer.data(), payload, size);
@@ -136,7 +115,7 @@ extern "C" void OnTxTimeout(void){
 
 extern "C" void OnRxTimeout(void){
 	if( DataTransmit::MasterMode == true){
-		if(++DataTransmit::timeout > 6){ // Po 5 neúspěšných pokusech o příjem dat považujeme slave za nereagujícího
+		if(++DataTransmit::timeout > DataTransmit::MAX_TX_ATTEMPTS){ // Po xx neúspěšných pokusech o příjem dat považujeme slave za nereagujícího
 			DataTransmit::RadioDriver->Standby( );
 			DataTransmit::RadioDriver->Rx(DataTransmit::ResponseTimeout);
 			DataTransmit::timeout = 0;
